@@ -38,13 +38,13 @@ class SlackWriterService implements Reactory.Service.IReactoryService {
    * @param channelId - The ID of the Slack channel
    * @param message - The message content to send
    * @param threadTs - Optional timestamp of parent message for threaded reply
-   * @returns Promise<boolean>
+   * @returns Promise with success boolean and optional message metadata
    */
   async writeMessage(
     channelId: string, 
     message: string, 
     threadTs?: string
-  ): Promise<boolean> {
+  ): Promise<{ ok: boolean; ts?: string; channel?: string; error?: string }> {
     const startTime = Date.now();
     try {
       if (!this.apiToken) {
@@ -89,7 +89,7 @@ class SlackWriterService implements Reactory.Service.IReactoryService {
         threadTs 
       });
 
-      return true;
+      return { ok: true, ts: data.ts, channel: data.channel };
 
     } catch (error) {
       if (this.context?.telemetry) {
@@ -102,7 +102,7 @@ class SlackWriterService implements Reactory.Service.IReactoryService {
         });
       }
       this.context.error(`SlackWriterService.writeMessage error: ${error.message}`, { channelId, message, error });
-      return false;
+      return { ok: false, error: error.message };
     }
   }
 
