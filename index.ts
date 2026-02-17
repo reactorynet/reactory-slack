@@ -6,7 +6,7 @@ import slackForms from './forms';
 import slackModels from './models';
 import slackServices from './services';
 import slackMacros from './ai/macros';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 const ReactorySlackModule: Reactory.Server.IReactoryModule = {
   id: 'reactory-slack',
