@@ -21,7 +21,8 @@ export const SlackReadMessages: Macro<any, {
       success: false, 
       error: 'Missing or invalid Slack bot token. Please provide a valid bot token.', 
       tool: 'readSlackMessages', 
-      params: props 
+      params: props,
+      instructions: `## Read Slack Messages — Authentication Error\n\nNo valid Slack bot token available. Checked provided botToken param and SLACK_BOT_TOKEN env var.\n\n### Recovery Options:\n- Provide a valid botToken parameter\n- Ensure SLACK_BOT_TOKEN environment variable is set\n- Use \`listSlackChannels\` to verify token validity first`
     };
   }
   
@@ -47,9 +48,14 @@ export const SlackReadMessages: Macro<any, {
       default:
         output = messages;
     }
-    return { success: true, data: output, tool: 'readSlackMessages', params: props, format };
+    const msgCount = Array.isArray(messages) ? messages.length : 0;
+    return { success: true, data: output, tool: 'readSlackMessages', params: props, format,
+      instructions: `## Slack Messages — Channel ${channelId}\n\nRetrieved **${msgCount}** message(s) in ${format} format.${oldest ? ` From: ${oldest}` : ''}${latest ? ` To: ${latest}` : ''}\n\n### Suggested Next Steps:\n- Use \`readSlackThreadReplies\` with a message timestamp to read thread replies\n- Use \`getSlackChannelInfo\` for channel details\n- Adjust limit/oldest/latest params for different time ranges`
+    };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : String(err), tool: 'readSlackMessages', params: props };
+    return { success: false, error: err instanceof Error ? err.message : String(err), tool: 'readSlackMessages', params: props,
+      instructions: `## Read Slack Messages — Error\n\nFailed to read messages from channel ${channelId}: ${err instanceof Error ? err.message : String(err)}\n\n### Recovery Options:\n- Verify the channelId is correct using \`listSlackChannels\`\n- Check bot token permissions (channels:history scope required)\n- Retry with a smaller limit or narrower time range`
+    };
   }
 };
 
@@ -122,7 +128,8 @@ export const SlackReadThreadReplies: Macro<any, { channelId: string; threadTs: s
       success: false, 
       error: 'Missing or invalid Slack bot token. Please provide a valid bot token.', 
       tool: 'readSlackThreadReplies', 
-      params: props 
+      params: props,
+      instructions: `## Read Thread Replies — Authentication Error\n\nNo valid Slack bot token available.\n\n### Recovery Options:\n- Provide a valid botToken parameter\n- Ensure SLACK_BOT_TOKEN environment variable is set`
     };
   }
   
@@ -145,9 +152,14 @@ export const SlackReadThreadReplies: Macro<any, { channelId: string; threadTs: s
       default:
         output = replies;
     }
-    return { success: true, data: output, tool: 'readSlackThreadReplies', params: props, format };
+    const replyCount = Array.isArray(replies) ? replies.length : 0;
+    return { success: true, data: output, tool: 'readSlackThreadReplies', params: props, format,
+      instructions: `## Thread Replies — Channel ${channelId}, Thread ${threadTs}\n\nRetrieved **${replyCount}** reply/replies in ${format} format.\n\n### Suggested Next Steps:\n- Use \`readSlackMessages\` to see other messages in the channel\n- Use \`getSlackChannelInfo\` for channel details`
+    };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : String(err), tool: 'readSlackThreadReplies', params: props };
+    return { success: false, error: err instanceof Error ? err.message : String(err), tool: 'readSlackThreadReplies', params: props,
+      instructions: `## Read Thread Replies — Error\n\nFailed to read thread replies: ${err instanceof Error ? err.message : String(err)}\n\n### Recovery Options:\n- Verify channelId and threadTs are correct\n- Use \`readSlackMessages\` to find valid thread timestamps\n- Check bot token permissions`
+    };
   }
 };
 
@@ -216,7 +228,8 @@ export const SlackGetChannelInfo: Macro<any, { channelId: string; botToken?: str
       success: false, 
       error: 'Missing or invalid Slack bot token. Please provide a valid bot token.', 
       tool: 'getSlackChannelInfo', 
-      params: props 
+      params: props,
+      instructions: `## Get Channel Info — Authentication Error\n\nNo valid Slack bot token available.\n\n### Recovery Options:\n- Provide a valid botToken parameter\n- Ensure SLACK_BOT_TOKEN environment variable is set`
     };
   }
   
@@ -239,9 +252,13 @@ export const SlackGetChannelInfo: Macro<any, { channelId: string; botToken?: str
       default:
         output = info;
     }
-    return { success: true, data: output, tool: 'getSlackChannelInfo', params: props, format };
+    return { success: true, data: output, tool: 'getSlackChannelInfo', params: props, format,
+      instructions: `## Channel Info — ${channelId}\n\nRetrieved channel information in ${format} format.\n\n### Suggested Next Steps:\n- Use \`readSlackMessages\` with channelId="${channelId}" to read messages\n- Use \`listSlackChannels\` to browse other channels`
+    };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : String(err), tool: 'getSlackChannelInfo', params: props };
+    return { success: false, error: err instanceof Error ? err.message : String(err), tool: 'getSlackChannelInfo', params: props,
+      instructions: `## Get Channel Info — Error\n\nFailed to get info for channel ${channelId}: ${err instanceof Error ? err.message : String(err)}\n\n### Recovery Options:\n- Verify channelId using \`listSlackChannels\`\n- Check bot token permissions (channels:read scope required)`
+    };
   }
 };
 
@@ -307,7 +324,8 @@ export const SlackListChannels: Macro<any, { types?: string; limit?: number; for
       success: false, 
       error: 'Missing or invalid Slack bot token. Please provide a valid bot token.', 
       tool: 'listSlackChannels', 
-      params: props 
+      params: props,
+      instructions: `## List Channels — Authentication Error\n\nNo valid Slack bot token available.\n\n### Recovery Options:\n- Provide a valid botToken parameter\n- Ensure SLACK_BOT_TOKEN environment variable is set`
     };
   }
   
@@ -330,9 +348,14 @@ export const SlackListChannels: Macro<any, { types?: string; limit?: number; for
       default:
         output = channels;
     }
-    return { success: true, data: output, tool: 'listSlackChannels', params: props, format };
+    const channelCount = Array.isArray(channels) ? channels.length : 0;
+    return { success: true, data: output, tool: 'listSlackChannels', params: props, format,
+      instructions: `## Slack Channels\n\nListed **${channelCount}** channel(s) of type "${types}" in ${format} format.\n\n### Suggested Next Steps:\n- Use \`readSlackMessages\` with a channelId to read messages\n- Use \`getSlackChannelInfo\` with a channelId for channel details\n- Adjust types param (public_channel, private_channel, mpim, im) for different channel types`
+    };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : String(err), tool: 'listSlackChannels', params: props };
+    return { success: false, error: err instanceof Error ? err.message : String(err), tool: 'listSlackChannels', params: props,
+      instructions: `## List Channels — Error\n\nFailed to list channels: ${err instanceof Error ? err.message : String(err)}\n\n### Recovery Options:\n- Check bot token permissions (channels:read scope required)\n- Reduce the limit parameter\n- Verify the types parameter is valid`
+    };
   }
 };
 
