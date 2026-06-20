@@ -100,7 +100,7 @@ tools:
     - readSlackThreadReplies
     - getSlackChannelInfo
     - listSlackChannels
-    - chat
+    - chats
 
 # ─────────────────────────────────────────────
 # Macro Includes
