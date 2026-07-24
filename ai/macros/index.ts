@@ -3,7 +3,7 @@ import {
  SlackListChannelsRegistry,
  SlackReadMessagesRegistry,
  SlackReadThreadRepliesRegistry,
-} from './SlackReaderMacros.ts';
+} from './SlackReaderMacros';
 
 export default [
  SlackGetChannelInfoRegistry,
