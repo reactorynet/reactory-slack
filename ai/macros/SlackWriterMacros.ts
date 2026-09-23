@@ -76,7 +76,6 @@ export const SlackWriteMessageRegistry: MacroComponentDefinition<typeof SlackWri
   icon: "send",
   tags: ["slack", "write", "messages", "channel"],
   runat: "server",
-  roles: ["USER"],
   tools: [
     {
       type: "function",

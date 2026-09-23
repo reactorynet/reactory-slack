@@ -80,7 +80,6 @@ export const SlackReadMessagesRegistry: MacroComponentDefinition<typeof SlackRea
   icon: "message",
   tags: ["slack", "read", "messages", "channel"],
   runat: "server",
-  roles: ["USER"],
   tools: [
     {
       type: "function",
