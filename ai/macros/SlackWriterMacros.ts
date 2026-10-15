@@ -2,6 +2,26 @@ import { Macro, MacroComponentDefinition, ChatState } from "@reactory/server-mod
 import Reactory from "@reactorynet/reactory-core";
 import SlackWriterService from "@reactory/server-modules/reactory-slack/services/SlackWriterService";
 
+const SLACK_TOKEN_PATTERN = /^xox[baprs]-/;
+
+/**
+ * Resolves a usable Slack bot token.
+ *
+ * - If a token is supplied, it is used only when it looks like a real Slack
+ *   bot token (`^xox[baprs]-`); an explicitly supplied invalid token is
+ *   rejected so the caller gets a clear authentication error rather than a
+ *   silent, confusing API failure.
+ * - If no token is supplied, SLACK_BOT_TOKEN is used as a fallback.
+ */
+function resolveSlackBotToken(botToken?: string): string | undefined {
+  const provided = typeof botToken === 'string' ? botToken.trim() : '';
+  if (provided !== '') {
+    return SLACK_TOKEN_PATTERN.test(provided) ? provided : undefined;
+  }
+  const envToken = process.env.SLACK_BOT_TOKEN;
+  return envToken && envToken.trim() !== '' ? envToken : undefined;
+}
+
 /**
  * Macro to write a message to a Slack channel
  */
@@ -15,7 +35,7 @@ export const SlackWriteMessage: Macro<any, {
   const { channelId, message, threadTs, botToken, format = 'json' } = props;
   
   // Validate botToken - ensure it's not null, undefined, or empty string
-  const validBotToken = botToken && botToken.trim() !== '' ? botToken : process.env.SLACK_BOT_TOKEN;
+  const validBotToken = resolveSlackBotToken(botToken);
   if (!validBotToken || validBotToken.trim() === '') {
     return { 
       success: false, 
@@ -26,11 +46,18 @@ export const SlackWriteMessage: Macro<any, {
     };
   }
   
-  const slackWriter = context.getService<SlackWriterService>("slack.SlackWriterService@1.0.0", {
+  const ctx = state?.context ?? context;
+  const slackWriter = ctx?.getService<SlackWriterService>("slack.SlackWriterService@1.0.0", {
     SLACK_BOT_TOKEN: validBotToken
   });
+  if (!slackWriter) {
+    return { success: false, error: 'Slack writer service not available', tool: null, params: props, instructions: '## Slack Writer - Service Unavailable\n\nCould not resolve slack.SlackWriterService@1.0.0 from the execution context.' };
+  }
   try {
     const result = await slackWriter.writeMessage(channelId, message, threadTs);
+    if (result && typeof result === 'object' && result.ok === false) {
+      return { success: false, error: result.error || 'Slack API error', tool: 'writeSlackMessage', params: props, instructions: `## Write Slack Message - Error\n\nSlack API rejected the message: ${result.error || 'Unknown error'}` };
+    }
     let output;
     switch (format) {
       case 'markdown':
@@ -118,7 +145,7 @@ export const SlackUpdateMessage: Macro<any, {
   const { channelId, messageTs, newText, botToken, format = 'json' } = props;
   
   // Validate botToken - ensure it's not null, undefined, or empty string
-  const validBotToken = botToken && botToken.trim() !== '' ? botToken : process.env.SLACK_BOT_TOKEN;
+  const validBotToken = resolveSlackBotToken(botToken);
   if (!validBotToken || validBotToken.trim() === '') {
     return { 
       success: false, 
@@ -129,9 +156,13 @@ export const SlackUpdateMessage: Macro<any, {
     };
   }
   
-  const slackWriter = context.getService<SlackWriterService>("slack.SlackWriterService@1.0.0", {
+  const ctx = state?.context ?? context;
+  const slackWriter = ctx?.getService<SlackWriterService>("slack.SlackWriterService@1.0.0", {
     SLACK_BOT_TOKEN: validBotToken
   });
+  if (!slackWriter) {
+    return { success: false, error: 'Slack writer service not available', tool: null, params: props, instructions: '## Slack Writer - Service Unavailable\n\nCould not resolve slack.SlackWriterService@1.0.0 from the execution context.' };
+  }
   try {
     const updated = await slackWriter.updateMessage(channelId, messageTs, newText);
     let output;
@@ -175,7 +206,7 @@ export const SlackUpdateMessageRegistry: MacroComponentDefinition<typeof SlackUp
   ],
   stem: "slack",
   alias: "updateSlackMessage",
-  tags: ["slack", "update", "messages", "channel"],
+  tags: ["slack", "write", "update", "messages", "channel"],
   runat: "server",
   roles: ["USER"],
   icon: "edit",
@@ -219,7 +250,7 @@ export const SlackDeleteMessage: Macro<any, {
   const { channelId, messageTs, botToken, format = 'json' } = props;
   
   // Validate botToken - ensure it's not null, undefined, or empty string
-  const validBotToken = botToken && botToken.trim() !== '' ? botToken : process.env.SLACK_BOT_TOKEN;
+  const validBotToken = resolveSlackBotToken(botToken);
   if (!validBotToken || validBotToken.trim() === '') {
     return { 
       success: false, 
@@ -230,9 +261,13 @@ export const SlackDeleteMessage: Macro<any, {
     };
   }
   
-  const slackWriter = context.getService<SlackWriterService>("slack.SlackWriterService@1.0.0", {
+  const ctx = state?.context ?? context;
+  const slackWriter = ctx?.getService<SlackWriterService>("slack.SlackWriterService@1.0.0", {
     SLACK_BOT_TOKEN: validBotToken
   });
+  if (!slackWriter) {
+    return { success: false, error: 'Slack writer service not available', tool: null, params: props, instructions: '## Slack Writer - Service Unavailable\n\nCould not resolve slack.SlackWriterService@1.0.0 from the execution context.' };
+  }
   try {
     const deleted = await slackWriter.deleteMessage(channelId, messageTs);
     let output;
@@ -276,7 +311,7 @@ export const SlackDeleteMessageRegistry: MacroComponentDefinition<typeof SlackDe
   ],
   stem: "slack",
   alias: "deleteSlackMessage",
-  tags: ["slack", "delete", "messages", "channel"],
+  tags: ["slack", "write", "delete", "messages", "channel"],
   runat: "server",
   roles: ["USER"],
   icon: "trash",
@@ -319,7 +354,7 @@ export const SlackAddReaction: Macro<any, {
   const { channelId, messageTs, reaction, botToken, format = 'json' } = props;
   
   // Validate botToken - ensure it's not null, undefined, or empty string
-  const validBotToken = botToken && botToken.trim() !== '' ? botToken : process.env.SLACK_BOT_TOKEN;
+  const validBotToken = resolveSlackBotToken(botToken);
   if (!validBotToken || validBotToken.trim() === '') {
     return { 
       success: false, 
@@ -330,9 +365,13 @@ export const SlackAddReaction: Macro<any, {
     };
   }
   
-  const slackWriter = context.getService<SlackWriterService>("slack.SlackWriterService@1.0.0", {
+  const ctx = state?.context ?? context;
+  const slackWriter = ctx?.getService<SlackWriterService>("slack.SlackWriterService@1.0.0", {
     SLACK_BOT_TOKEN: validBotToken
   });
+  if (!slackWriter) {
+    return { success: false, error: 'Slack writer service not available', tool: null, params: props, instructions: '## Slack Writer - Service Unavailable\n\nCould not resolve slack.SlackWriterService@1.0.0 from the execution context.' };
+  }
   try {
     const added = await slackWriter.addReaction(channelId, messageTs, reaction);
     let output;
@@ -376,7 +415,7 @@ export const SlackAddReactionRegistry: MacroComponentDefinition<typeof SlackAddR
   ],
   stem: "slack",
   alias: "addSlackReaction",
-  tags: ["slack", "react", "reactions", "messages", "channel"],
+  tags: ["slack", "write", "react", "reactions", "messages", "channel"],
   runat: "server",
   roles: ["USER"],
   icon: "emoji_events",
@@ -420,7 +459,7 @@ export const SlackJoinChannel: Macro<any, {
   const { channelId, botToken, format = 'json' } = props;
   
   // Validate botToken - ensure it's not null, undefined, or empty string
-  const validBotToken = botToken && botToken.trim() !== '' ? botToken : process.env.SLACK_BOT_TOKEN;
+  const validBotToken = resolveSlackBotToken(botToken);
   if (!validBotToken || validBotToken.trim() === '') {
     return { 
       success: false, 
@@ -431,9 +470,13 @@ export const SlackJoinChannel: Macro<any, {
     };
   }
   
-  const slackWriter = context.getService<SlackWriterService>("slack.SlackWriterService@1.0.0", {
+  const ctx = state?.context ?? context;
+  const slackWriter = ctx?.getService<SlackWriterService>("slack.SlackWriterService@1.0.0", {
     SLACK_BOT_TOKEN: validBotToken
   });
+  if (!slackWriter) {
+    return { success: false, error: 'Slack writer service not available', tool: null, params: props, instructions: '## Slack Writer - Service Unavailable\n\nCould not resolve slack.SlackWriterService@1.0.0 from the execution context.' };
+  }
   try {
     const joined = await slackWriter.joinChannel(channelId);
     let output;
@@ -477,7 +520,7 @@ export const SlackJoinChannelRegistry: MacroComponentDefinition<typeof SlackJoin
   ],
   stem: "slack",
   alias: "joinSlackChannel",
-  tags: ["slack", "join", "channels"],
+  tags: ["slack", "write", "join", "channels"],
   runat: "server",
   roles: ["USER"],
   icon: "add",
@@ -505,3 +548,11 @@ export const SlackJoinChannelRegistry: MacroComponentDefinition<typeof SlackJoin
     }
   ]
 };
+
+export const SlackWriterMacros: MacroComponentDefinition<any>[] = [
+  SlackWriteMessageRegistry,
+  SlackUpdateMessageRegistry,
+  SlackDeleteMessageRegistry,
+  SlackAddReactionRegistry,
+  SlackJoinChannelRegistry,
+];

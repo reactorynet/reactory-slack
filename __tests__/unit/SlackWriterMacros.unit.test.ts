@@ -1,8 +1,8 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 
 // ── Mock service ──────────────────────────────────────────────────────────────
 
-const mockSlackWriterSvc = {
+const mockSlackWriterSvc: any = {
   writeMessage: jest.fn(),
   updateMessage: jest.fn(),
   deleteMessage: jest.fn(),
@@ -17,7 +17,7 @@ jest.mock('@reactory/server-core/logging', () => ({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeState(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function makeState(overrides: Record<string, unknown> = {}): any {
   return {
     context: {
       getService: jest.fn((fqn: string) => {
@@ -34,13 +34,19 @@ function makeState(overrides: Record<string, unknown> = {}): Record<string, unkn
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('Slack Writer Macros', () => {
-  let macros: typeof import('../ai/macros/SlackWriterMacros');
+  let macros: typeof import('../../ai/macros/SlackWriterMacros');
+  const ORIGINAL_SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
+
+  afterEach(() => {
+    // Restore the ambient token so this suite does not leak it into others.
+    if (ORIGINAL_SLACK_BOT_TOKEN === undefined) delete process.env.SLACK_BOT_TOKEN;
+    else process.env.SLACK_BOT_TOKEN = ORIGINAL_SLACK_BOT_TOKEN;
+  });
 
   beforeEach(async () => {
-    
-
-
+    process.env.SLACK_BOT_TOKEN = 'xoxb-unit-test-token';
     jest.clearAllMocks();
+    macros = await import('../../ai/macros/SlackWriterMacros');
   });
 
   // ── SlackWriteMessage ─────────────────────────────────────────────────────
@@ -61,7 +67,7 @@ describe('Slack Writer Macros', () => {
       mockSlackWriterSvc.writeMessage.mockResolvedValue({ ok: true, ts: '1234567890.123', channel: 'C123' });
       const state = makeState();
       const result = await macros.SlackWriteMessage(
-        { channelId: 'C123', message: 'Hello' },
+        { channelId: 'C123', message: 'Hello', format: 'markdown' },
         state,
       );
       expect(result.success).toBe(true);
@@ -82,6 +88,7 @@ describe('Slack Writer Macros', () => {
     });
 
     it('returns error when botToken is missing and SLACK_BOT_TOKEN is not set', async () => {
+      delete process.env.SLACK_BOT_TOKEN;
       const state = makeState();
       const result = await macros.SlackWriteMessage(
         { channelId: 'C123', message: 'Hello' },
@@ -172,6 +179,7 @@ describe('Slack Writer Macros', () => {
     });
 
     it('returns error when botToken is missing', async () => {
+      delete process.env.SLACK_BOT_TOKEN;
       const state = makeState();
       const result = await macros.SlackUpdateMessage(
         { channelId: 'C123', messageTs: '1234567890.123', newText: 'Updated' },
@@ -241,6 +249,7 @@ describe('Slack Writer Macros', () => {
     });
 
     it('returns error when botToken is missing', async () => {
+      delete process.env.SLACK_BOT_TOKEN;
       const state = makeState();
       const result = await macros.SlackDeleteMessage(
         { channelId: 'C123', messageTs: '1234567890.123' },
@@ -309,6 +318,7 @@ describe('Slack Writer Macros', () => {
     });
 
     it('returns error when botToken is missing', async () => {
+      delete process.env.SLACK_BOT_TOKEN;
       const state = makeState();
       const result = await macros.SlackAddReaction(
         { channelId: 'C123', messageTs: '1234567890.123', reaction: 'thumbsup' },
@@ -378,6 +388,7 @@ describe('Slack Writer Macros', () => {
     });
 
     it('returns error when botToken is missing', async () => {
+      delete process.env.SLACK_BOT_TOKEN;
       const state = makeState();
       const result = await macros.SlackJoinChannel(
         { channelId: 'C123' },
